@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:mule-ss="http://www.mulesoft.org/schema/mule/spring-security"
+     xmlns:ss="http://www.springframework.org/schema/security"
+ xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw" 
+ xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+ xmlns="http://www.mulesoft.org/schema/mule/core" 
+ xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit"
+  xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+  xmlns:spring="http://www.springframework.org/schema/beans"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd
+http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/spring-security http://www.mulesoft.org/schema/mule/spring-security/current/mule-spring-security.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/spring-security http://www.mulesoft.org/schema/mule/spring-security/3.1/mule-spring-security.xsd
+http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.0.xsd
+">
+
+   
+
+ <spring:beans>
+    <ss:authentication-manager alias="authenticationManager">
+      <ss:authentication-provider>
+        <ss:user-service id="userService">
+          <ss:user name="user" password="password" authorities="ROLE_ADMIN" />
+          <ss:user name="user1" password="password" authorities="ROLE_ADMIN" />
+          <ss:user name="anon" password="anon" authorities="ROLE_ANON" />
+        </ss:user-service>
+      </ss:authentication-provider>
+    </ss:authentication-manager>
+  </spring:beans>
+
+ 
+ 
+ 
+    <http:listener-config name="usecase1-exp-api-httpListenerConfig" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <apikit:config name="usecase1-exp-api-config" raml="usecase1-exp-api.raml" consoleEnabled="false" doc:name="Router"/>
+    <api-platform-gw:api apiName="groupId:9eb92838-a4f6-4086-b4ed-e3097e83ec95:assetId:usecase1-exp-api" version="v1:15795654" flowRef="usecase1-exp-api-main" create="true" apikitRef="usecase1-exp-api-config" doc:name="API Autodiscovery"/>
+   
+		
+    <mule-ss:security-manager name="Spring_Security_Provider" doc:name="Spring Security Provider">
+        <mule-ss:delegate-security-provider name="memory-provider" delegate-ref="authenticationManager"/>
+    </mule-ss:security-manager>
+
+    <flow name="usecase1-exp-api-main">
+        <http:listener config-ref="usecase1-exp-api-httpListenerConfig" path="/api/*" doc:name="HTTP"/>
+        <http:basic-security-filter realm="mule-realm" />
+		<mule-ss:authorization-filter 
+			requiredAuthorities="ROLE_ADMIN" />
+        <apikit:router config-ref="usecase1-exp-api-config" doc:name="APIkit Router"/>
+        <exception-strategy ref="usecase1-exp-api-apiKitGlobalExceptionMapping" doc:name="Reference Exception Strategy"/>
+    </flow>
+    <flow name="usecase1-exp-api-console">
+        <http:listener config-ref="usecase1-exp-api-httpListenerConfig" path="/console/*" doc:name="HTTP"/>
+        <apikit:console config-ref="usecase1-exp-api-config" doc:name="APIkit Console"/>
+    </flow>
+    <flow name="get:/countryInfo:usecase1-exp-api-config">
+        <flow-ref name="countryinfoFlow" doc:name="countryinfoFlow"/>
+    </flow>
+    <apikit:mapping-exception-strategy name="usecase1-exp-api-apiKitGlobalExceptionMapping">
+        <apikit:mapping statusCode="404">
+            <apikit:exception value="org.mule.module.apikit.exception.NotFoundException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="405">
+            <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Method not allowed&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="415">
+            <apikit:exception value="org.mule.module.apikit.exception.UnsupportedMediaTypeException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Unsupported media type&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="406">
+            <apikit:exception value="org.mule.module.apikit.exception.NotAcceptableException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="400">
+            <apikit:exception value="org.mule.module.apikit.exception.BadRequestException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Bad request&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+    </apikit:mapping-exception-strategy>
+</mule>

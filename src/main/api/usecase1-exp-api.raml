@@ -1,0 +1,41 @@
+#%RAML 1.0
+baseUri: https://anypoint.mulesoft.com/mocking/api/v1/links/f3a194f9-68a2-4fb4-b601-1feee0c39e51/ # 
+title: usecase1-exp-api
+
+version: v1
+traits:
+
+  client-credentials-required:
+    headers:
+      client_id:
+        type: string
+        example: 7b404180fbb84b099179a4126a9576ff
+      client_secret:
+        type: string
+        example: e241f4aa3eca4b2a8FA67A2FEF5754F8
+
+securitySchemes: 
+  basic:
+    description: First simple auth
+    type: Basic Authentication
+    describedBy: 
+      headers: 
+        Authorization:
+          description: Base64-encoded "username:password"
+        type: string
+      responses: 
+        401: 
+          description: |
+            Unauthorized: username or password or the combination is invalid
+/countryInfo:
+  get:
+    securedBy: [ basic ]
+    queryParameters:
+      countryName:
+    description: Return a standard response.
+    is: [client-credentials-required]
+    responses:
+      200:
+        body:
+          application/json:
+            example: !include examples/get-response.json          
